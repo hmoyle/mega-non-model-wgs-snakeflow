@@ -307,6 +307,9 @@ def get_scattered_vcfs(wildcards, ext):
     scat_ids=scatter_groups.loc[(scatter_groups["id"] == wildcards.sg_or_chrom), "scatter_idx"].unique()
     return expand("results/bqsr-round-{{bqsr_round}}/vcf_sections/{{sg_or_chrom}}/{scat}.vcf.gz{e}", scat=scat_ids, e=ext)
 
+def get_scattered_ds_vcfs(wildcards, ext):
+    scat_ids=scatter_groups.loc[(scatter_groups["id"] == wildcards.sg_or_chrom), "scatter_idx"].unique()
+    return expand("results/bqsr-round-{{bqsr_round}}/downsample-{{cov}}X/vcf_sections/{{sg_or_chrom}}/{scat}.vcf.gz{e}", scat=scat_ids, e=ext)
 
 
 # we have this here becuase we only want to do fastp and  mkdup
