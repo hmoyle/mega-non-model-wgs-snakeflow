@@ -61,6 +61,8 @@ rule thin_bam:
         " fi "
         " ) 2> {log} "
 
+
+# calling
 rule make_ds_gvcf_sections:
     input:
         bam="results/bqsr-round-{bqsr_round}/downsample-{cov}X/overlap_clipped/{sample}.bam",
@@ -114,3 +116,175 @@ rule concat_ds_gvcf_sections:
     shell:
         " bcftools concat {params.opts} -O z {input} > {output.gvcf} 2>{log}; "
         " bcftools index -t {output.gvcf} "
+
+
+rule genomics_db_import_chromosomes_ds:
+    input:
+        gvcfs=lambda wc: expand("results/bqsr-round-{{bqsr_round}}/downsample-{{cov}}X/gvcf_sections/{sample}/{{chromo}}.g.vcf.gz", sample=sample_list),
+        gvcf_idxs=lambda wc: expand("results/bqsr-round-{{bqsr_round}}/downsample-{{cov}}X/gvcf_sections/{sample}/{{chromo}}.g.vcf.gz.tbi", sample=sample_list),
+    output:
+        db=directory("results/bqsr-round-{bqsr_round}/downsample-{cov}X/genomics_db/{chromo}")
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/genomicsdbimport/{chromo}.log"
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/genomics_db_import_chromosomes_ds/{chromo}.bmk"
+    params:
+        my_opts=chromo_import_gdb_opts,
+        java_opts="-Xmx4g",  # optional
+    resources:
+        mem_mb = 9400,
+        cpus = 2,
+        time = "36:00:00"
+    threads: 2
+    conda:
+        "../envs/gatk4.2.6.1.yaml"
+    shell:
+        " gatk --java-options {params.java_opts} GenomicsDBImport "
+        " $(echo {input.gvcfs} | awk '{{for(i=1;i<=NF;i++) printf(\" -V %s \", $i)}}') "
+        " {params.my_opts} {output.db} > {log} 2>&1  "
+        
+
+
+rule genomics_db_import_scaffold_groups_ds:
+    input:
+        gvcfs=lambda wc: expand("results/bqsr-round-{{bqsr_round}}/downsample-{{cov}}X/gvcf_sections/{sample}/{{scaff_group}}.g.vcf.gz", sample=sample_list),
+        gvcf_idxs=lambda wc: expand("results/bqsr-round-{{bqsr_round}}/downsample-{{cov}}X/gvcf_sections/{sample}/{{scaff_group}}.g.vcf.gz.tbi", sample=sample_list),
+        scaff_groups = config["scaffold_groups"],
+    output:
+        interval_list="results/bqsr-round-{bqsr_round}/downsample-{cov}X/gdb_intervals/{scaff_group}.list",
+        db=directory("results/bqsr-round-{bqsr_round}/downsample-{cov}X/genomics_db/{scaff_group}")
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/genomicsdbimport/{scaff_group}.log"
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/genomics_db_import_scaffold_groups_ds/{scaff_group}.bmk"
+    params:
+        my_opts=scaff_group_import_gdb_opts,
+        java_opts="-Xmx4g",  # optional
+    resources:
+        mem_mb = 9400,
+        cpus = 2,
+        time = "36:00:00"
+    threads: 2
+    conda:
+        "../envs/gatk4.2.6.1.yaml"
+    shell:
+        " awk -v sg={wildcards.scaff_group} 'NR>1 && $1 == sg {{print $2}}' {input.scaff_groups} > {output.interval_list}; "
+        " gatk --java-options {params.java_opts} GenomicsDBImport "
+        " $(echo {input.gvcfs} | awk '{{for(i=1;i<=NF;i++) printf(\" -V %s \", $i)}}') "
+        " {params.my_opts} {output.db} >{log} 2>&1; "
+
+
+  
+rule genomics_db2vcf_scattered_ds:
+    input:
+        genome="resources/genome.fasta",
+        scatters="results/bqsr-round-{bqsr_round}/scatter_interval_lists/{sg_or_chrom}/{scatter}.list",
+        db="results/bqsr-round-{bqsr_round}/downsample-{cov}X/genomics_db/{sg_or_chrom}",
+    output:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sections/{sg_or_chrom}/{scatter}.vcf.gz",
+        tbi="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sections/{sg_or_chrom}/{scatter}.vcf.gz.tbi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/genotypegvcfs/{sg_or_chrom}/{scatter}.log",
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/genomics_db2vcf_ds/{sg_or_chrom}/{scatter}.bmk",
+    params:
+        gendb="results/bqsr-round-{bqsr_round}/downsample-{cov}X/genomics_db/{sg_or_chrom}",
+        java_opts="-Xmx8g",  # I might need to consider a temp directory, too in which case, put it in the config.yaml
+        pextra=" --genomicsdb-shared-posixfs-optimizations --only-output-calls-starting-in-intervals "
+    resources:
+        mem_mb = 11750,
+        cpus = 2,
+        time = "1-00:00:00"
+    threads: 2
+    conda:
+        "../envs/gatk4.2.6.1.yaml"
+    shell:
+        " gatk --java-options {params.java_opts} GenotypeGVCFs "
+        " {params.pextra} "
+        " -L {input.scatters} "
+        " -R {input.genome} "
+        " -V gendb://{params.gendb} "
+        " -O {output.vcf} > {log} 2> {log} "
+
+
+rule gather_scattered_ds_vcfs:
+    input:
+        vcf=lambda wc: get_scattered_ds_vcfs(wc, ""),
+        tbi=lambda wc: get_scattered_ds_vcfs(wc, ".tbi"),
+    output:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sections/{sg_or_chrom}.vcf.gz",
+        tbi="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sections/{sg_or_chrom}.vcf.gz.tbi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gather_scattered_ds_vcfs/{sg_or_chrom}.txt"
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/gather_scattered_ds_vcfs/{sg_or_chrom}.bmk",
+    params:
+        opts=" --naive "
+    conda:
+        "../envs/bcftools.yaml"
+    shell:
+        " (bcftools concat {params.opts} -Oz {input.vcf} > {output.vcf}; "
+        " bcftools index -t {output.vcf})  2>{log}; "
+
+
+
+rule mark_dp0_as_missing_ds:
+    input:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sections/{sg_or_chrom}.vcf.gz"
+    output:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sect_miss_denoted/{sg_or_chrom}.vcf.gz",
+        tbi="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sect_miss_denoted/{sg_or_chrom}.vcf.gz.tbi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/mark_dp0_as_missing_ds/{sg_or_chrom}.log",
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}Xbenchmarks/mark_dp0_as_missing_ds/{sg_or_chrom}.bmk"
+    conda:
+        "../envs/bcftools.yaml"
+    shell:
+        "(bcftools +setGT {input.vcf} -- -t q -n . -i 'FMT/DP=0 | (FMT/PL[:0]=0 & FMT/PL[:1]=0 & FMT/PL[:2]=0)' | "
+        " bcftools +fill-tags - -- -t 'NMISS=N_MISSING' | "
+        " bcftools view -Oz - > {output.vcf}; "
+        " bcftools index -t {output.vcf}) 2> {log} "
+
+
+
+
+rule ds_bcf_concat:
+    input:
+        expand("results/bqsr-round-{{bqsr_round}}/downsample-{{cov}}X/hard_filtering/both-filtered-{sgc}.bcf", sgc = unique_chromosomes + unique_scaff_groups)
+    output:
+        bcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/bcf/all.bcf",
+        tbi="results/bqsr-round-{bqsr_round}/downsample-{cov}X/bcf/all.bcf.csi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/ds_bcf_concat/bcf_concat_log.txt"
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/ds_bcf_concat/bcf_concat.bmk",
+    params:
+        opts=" --naive "
+    conda:
+        "../envs/bcftools.yaml"
+    shell:
+        " (bcftools concat {params.opts} -Ob {input} > {output.bcf}; "
+        " bcftools index {output.bcf})  2> {log}; "
+
+
+
+
+
+rule ds_bcf_concat_mafs:
+    input:
+        expand("results/bqsr-round-{{bqsr_round}}/downsample-{{cov}}X/hard_filtering/both-filtered-{sgc}-maf-{{maf}}.bcf", sgc = unique_chromosomes + unique_scaff_groups)
+    output:
+        bcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/bcf/pass-maf-{maf}.bcf",
+        tbi="results/bqsr-round-{bqsr_round}/downsample-{cov}X/bcf/pass-maf-{maf}.bcf.csi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/ds_bcf_concat_mafs/maf-{maf}.txt"
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/ds_bcf_concat_mafs/maf-{maf}.bmk",
+    params:
+        opts=" --naive "
+    conda:
+        "../envs/bcftools.yaml"
+    shell:
+        " (bcftools concat {params.opts} -Ob {input} > {output.bcf}; "
+        " bcftools index {output.bcf})  2>{log}; "
