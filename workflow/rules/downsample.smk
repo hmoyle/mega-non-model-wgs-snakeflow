@@ -61,3 +61,38 @@ rule thin_bam:
         " fi "
         " ) 2> {log} "
 
+rule make_ds_gvcf_sections:
+    input:
+        unpack(get_ds_bams_for_calling),
+        ref="resources/genome.fasta",
+        idx="resources/genome.dict",
+        fai="resources/genome.fasta.fai",
+        interval_list="results/bqsr-round-{bqsr_round}/interval_lists/{sg_or_chrom}.list"
+    output:
+        gvcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/gvcf_sections/{sample}/{sg_or_chrom}.g.vcf.gz",
+        idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/gvcf_sections/{sample}/{sg_or_chrom}.g.vcf.gz.tbi",
+    conda:
+        "../envs/gatk4.2.6.1.yaml"
+    log:
+        stderr="results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/haplotypecaller/{sample}/{sg_or_chrom}.stderr",
+        stdout="results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/haplotypecaller/{sample}/{sg_or_chrom}.stdout",
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/make_gvcfs/{sample}/{sg_or_chrom}.bmk"
+    params:
+        java_opts="-Xmx4g",
+        conf_pars=config["params"]["gatk"]["HaplotypeCaller"]
+    resources:
+        time="1-00:00:00",
+        mem_mb = 4600,
+        cpus = 1
+    threads: 1
+    shell:
+        "gatk --java-options \"{params.java_opts}\" HaplotypeCaller "
+        " -R {input.ref} "
+        " -I {input.bam} "
+        " -O {output.gvcf} "
+        " -L {input.interval_list} "
+        " --native-pair-hmm-threads {threads} "
+        " {params.conf_pars} "
+        " -ERC GVCF > {log.stdout} 2> {log.stderr} "
+
