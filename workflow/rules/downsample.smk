@@ -288,3 +288,131 @@ rule ds_bcf_concat_mafs:
     shell:
         " (bcftools concat {params.opts} -Ob {input} > {output.bcf}; "
         " bcftools index {output.bcf})  2>{log}; "
+
+
+# hard filtering
+rule make_snp_vcf_ds:
+    input:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sect_miss_denoted/{sg_or_chrom}.vcf.gz",
+        tbi="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sect_miss_denoted/{sg_or_chrom}.vcf.gz.tbi"
+    output:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/snps-{sg_or_chrom}.vcf.gz",
+        idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/snps-{sg_or_chrom}.vcf.gz.tbi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/selectvariants/select-snps-{sg_or_chrom}.log",
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/make_snp_vcf_ds/selectvariants-snps-{sg_or_chrom}.bmk"
+    conda:
+        "../envs/gatk4.2.6.1.yaml"
+    shell:
+        " gatk SelectVariants -V {input.vcf}  -select-type SNP -O {output.vcf} > {log} 2>&1 "
+
+
+
+rule make_indel_vcf_ds:
+    input:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sect_miss_denoted/{sg_or_chrom}.vcf.gz",
+        tbi="results/bqsr-round-{bqsr_round}/downsample-{cov}X/vcf_sect_miss_denoted/{sg_or_chrom}.vcf.gz.tbi"
+    output:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/indels-{sg_or_chrom}.vcf.gz",
+        idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/indels-{sg_or_chrom}.vcf.gz.tbi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/selectvariants/select-indels-{sg_or_chrom}.log",
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/make_indel_vcf_ds/selectvariants-indels-{sg_or_chrom}.bmk"
+    conda:
+        "../envs/gatk4.2.6.1.yaml"
+    shell:
+        " gatk SelectVariants -V {input.vcf}  -select-type INDEL -O {output.vcf} > {log} 2>&1 "
+
+
+
+
+rule hard_filter_snps_ds:
+    input:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/snps-{sg_or_chrom}.vcf.gz",
+        idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/snps-{sg_or_chrom}.vcf.gz.tbi"
+    output:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/snps-filtered-{sg_or_chrom}.vcf.gz",
+        idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/snps-filtered-{sg_or_chrom}.vcf.gz.tbi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/variantfiltration/snps-{sg_or_chrom}.log",
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/hard_filter_snps_ds/variantfiltration-snps-{sg_or_chrom}.bmk"
+    conda:
+        "../envs/gatk4.2.6.1.yaml"
+    shell:
+        "gatk VariantFiltration "
+        " -V {input.vcf} "
+        "  -filter 'QD < 2.0' --filter-name 'QD2' "
+        "  -filter 'QUAL < 30.0' --filter-name 'QUAL30' "
+        "  -filter 'SOR > 3.0' --filter-name 'SOR3' "
+        "  -filter 'FS > 60.0' --filter-name 'FS60' "
+        "  -filter 'MQ < 40.0' --filter-name 'MQ40' "
+        "  -filter 'MQRankSum < -12.5' --filter-name 'MQRankSum-12.5' "
+        "  -filter 'ReadPosRankSum < -8.0' --filter-name 'ReadPosRankSum-8' "
+        " -O {output.vcf} > {log} 2>&1 "
+
+
+
+
+rule hard_filter_indels_ds:
+    input:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/indels-{sg_or_chrom}.vcf.gz",
+        idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/indels-{sg_or_chrom}.vcf.gz.tbi"
+    output:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/indels-filtered-{sg_or_chrom}.vcf.gz",
+        idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/indels-filtered-{sg_or_chrom}.vcf.gz.tbi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/variantfiltration/indels-{sg_or_chrom}.log",
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/hard_filter_indels_ds/variantfiltration-indels-{sg_or_chrom}.bmk"
+    conda:
+        "../envs/gatk4.2.6.1.yaml"
+    shell:
+        "gatk VariantFiltration "
+        " -V {input.vcf} "
+        "  -filter 'QD < 2.0' --filter-name 'QD2' "
+        "  -filter 'QUAL < 30.0' --filter-name 'QUAL30' "
+        "  -filter 'FS > 200.0' --filter-name 'FS200' "
+        "  -filter 'ReadPosRankSum < -20.0' --filter-name 'ReadPosRankSum-20' "
+        " -O {output.vcf} > {log} 2>&1 "
+
+
+
+
+rule bung_filtered_ds_vcfs_back_together:
+    input:
+        snp="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/snps-filtered-{sg_or_chrom}.vcf.gz",
+        indel="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/indels-filtered-{sg_or_chrom}.vcf.gz",
+        snp_idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/snps-filtered-{sg_or_chrom}.vcf.gz.tbi",
+        indel_idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/indels-filtered-{sg_or_chrom}.vcf.gz.tbi"
+    output:
+        vcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/both-filtered-{sg_or_chrom}.bcf",
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/bung_filtered_ds_vcfs_back_together/bung-{sg_or_chrom}.log",
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/bung_filtered_ds_vcfs_back_together/bcftools-{sg_or_chrom}.bmk"
+    conda:
+        "../envs/bcftools.yaml"
+    shell:
+        "(bcftools concat -a {input.snp} {input.indel} | "
+        " bcftools view -Ob > {output.vcf}; ) 2> {log} "
+
+
+rule maf_filter_ds:
+    input:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/both-filtered-{sg_or_chrom}.bcf"
+    output:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/hard_filtering/both-filtered-{sg_or_chrom}-maf-{maf}.bcf"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/maf_filter_ds/{sg_or_chrom}-maf-{maf}.log",
+    params:
+        maf="{maf}"
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/benchmarks/maf_filter/{sg_or_chrom}-maf-{maf}.bmk"
+    conda:
+        "../envs/bcftools.yaml"
+    shell:
+        " bcftools view -Ob -i 'FILTER=\"PASS\" & MAF > {params.maf} ' "
+        " {input} > {output} 2>{log} "
