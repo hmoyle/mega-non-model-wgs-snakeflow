@@ -63,7 +63,7 @@ rule thin_bam:
 
 rule make_ds_gvcf_sections:
     input:
-        unpack(get_ds_bams_for_calling),
+        bam="results/bqsr-round-{bqsr_round}/downsample-{cov}X/overlap_clipped/{sample}.bam",
         ref="resources/genome.fasta",
         idx="resources/genome.dict",
         fai="resources/genome.fasta.fai",
