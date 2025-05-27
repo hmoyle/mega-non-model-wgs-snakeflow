@@ -54,7 +54,12 @@ rule dest_downsample_bams_only:
 			cov = config["downsample_bams"]["depths"],
 			sample = sample_list )
 
-
+rule dest_downsample_bcf:
+	input:
+		bcf=expand(results/bqsr-round-{bqsr_round}/downsample-{cov}X/gvcf/{sample}.g.vcf.gz",
+		bqsr_round = config["downsample_bams"]["bqsr_round"],
+		cov = config["downsample_bams"]["depths"], 
+		sample = sample_list )
 
 # this is just here to make it easy to do a run that just
 # force-calls the sites
