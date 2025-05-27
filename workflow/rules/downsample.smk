@@ -77,7 +77,7 @@ rule make_ds_gvcf_sections:
         stderr="results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/haplotypecaller/{sample}/{sg_or_chrom}.stderr",
         stdout="results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/gatk/haplotypecaller/{sample}/{sg_or_chrom}.stdout",
     benchmark:
-        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/make_gvcfs/{sample}/{sg_or_chrom}.bmk"
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/make_ds_gvcfs/{sample}/{sg_or_chrom}.bmk"
     params:
         java_opts="-Xmx4g",
         conf_pars=config["params"]["gatk"]["HaplotypeCaller"]
@@ -96,3 +96,21 @@ rule make_ds_gvcf_sections:
         " {params.conf_pars} "
         " -ERC GVCF > {log.stdout} 2> {log.stderr} "
 
+
+rule concat_ds_gvcf_sections:
+    input: 
+        expand("results/bqsr-round-{{bqsr_round}}/downsample-{cov}X/gvcf_sections/{{sample}}/{sgc}.g.vcf.gz", sgc = unique_chromosomes + unique_scaff_groups)
+    output:
+        gvcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/gvcf/{sample}.g.vcf.gz",
+        idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/gvcf/{sample}.g.vcf.gz.tbi"
+    log:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/logs/concat_ds_gvcf_sections/{sample}.txt"
+    benchmark:
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/concat_ds_gvcf_sections/{sample}.bmk",
+    params:
+        opts=" --naive "
+    conda:
+        "../envs/bcftools.yaml"
+    shell:
+        " bcftools concat {params.opts} -O z {input} > {output.gvcf} 2>{log}; "
+        " bcftools index -t {output.gvcf} "
