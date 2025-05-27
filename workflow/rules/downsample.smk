@@ -99,7 +99,7 @@ rule make_ds_gvcf_sections:
 
 rule concat_ds_gvcf_sections:
     input: 
-        expand("results/bqsr-round-{{bqsr_round}}/downsample-{cov}X/gvcf_sections/{{sample}}/{sgc}.g.vcf.gz", sgc = unique_chromosomes + unique_scaff_groups)
+        expand("results/bqsr-round-{{bqsr_round}}/downsample-{{cov}}X/gvcf_sections/{{sample}}/{sgc}.g.vcf.gz", sgc = unique_chromosomes + unique_scaff_groups)
     output:
         gvcf="results/bqsr-round-{bqsr_round}/downsample-{cov}X/gvcf/{sample}.g.vcf.gz",
         idx="results/bqsr-round-{bqsr_round}/downsample-{cov}X/gvcf/{sample}.g.vcf.gz.tbi"
