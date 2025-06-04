@@ -66,7 +66,7 @@ rule dest_downsample_bcf:
 	input:
 		expand("results/bqsr-round-{bqsr_round}/downsample-{cov}X/bcf/all.bcf", 
 		bqsr_round = config["downsample_bams"]["bqsr_round"], 
-		cov = config["downsample_bams"]["depth"]), 
+		cov = config["downsample_bams"]["depths"]), 
 		expand("results/bqsr-round-{bqsr_round}/downsample-{cov}X/pass-maf-{maf}.bcf", 
 		bqsr_round = config["downsample_bams"]["bqsr_round"], 
 		cov = config["downsample_bams"]["depth"], 
