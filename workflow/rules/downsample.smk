@@ -410,7 +410,7 @@ rule maf_filter_ds:
     params:
         maf="{maf}"
     benchmark:
-        "results/bqsr-round-{bqsr_round}/benchmarks/maf_filter/{sg_or_chrom}-maf-{maf}.bmk"
+        "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/maf_filter/{sg_or_chrom}-maf-{maf}.bmk"
     conda:
         "../envs/bcftools.yaml"
     shell:
