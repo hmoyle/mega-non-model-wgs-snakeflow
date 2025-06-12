@@ -36,12 +36,6 @@ mafs = list(
             )
         )
 
-ds_depths = list(
-        dict.fromkeys(
-            [str(x) for x in config["downsample_bams"]["depths"]] + 
-            [str(config["bqsr_maf"])]
-            )
-        )
 
 # deal with a path prefix for all the fastqs, if it exists
 data_prefix = ""
@@ -156,7 +150,6 @@ wildcard_constraints:
     sg_or_chrom="|".join(unique_scaff_groups + unique_chromosomes),
     filter_condition="ALL|PASS|FAIL",
     maf="|".join(mafs),
-    dep="|".join(ds_depths),
     scatter=scatter_wc_constraint,
     igrp="|".join(indel_grps_list),
     bqsr_round="|".join(["0","1","2","3","4"])
