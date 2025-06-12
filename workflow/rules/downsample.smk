@@ -158,7 +158,7 @@ rule genomics_db_import_scaffold_groups_ds:
     benchmark:
         "results/bqsr-round-{bqsr_round}/downsample-{cov}X/benchmarks/genomics_db_import_scaffold_groups_ds/{scaff_group}.bmk"
     params:
-        my_opts=scaff_group_import_gdb_ds_opts,
+        my_opts=" --batch-size 50 --reader-threads 2 --genomicsdb-shared-posixfs-optimizations --intervals results/bqsr-round-{bsqr_round}/downsample-{cov}X/gdb_intervals/{scaff_group}.list --merge-contigs-into-num-partitions 1  --genomicsdb-workspace-path ",
         java_opts="-Xmx4g",  # optional
     resources:
         mem_mb = 9400,
