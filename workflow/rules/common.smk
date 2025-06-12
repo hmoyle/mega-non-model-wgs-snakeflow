@@ -155,7 +155,7 @@ wildcard_constraints:
     scatter=scatter_wc_constraint,
     igrp="|".join(indel_grps_list),
     bqsr_round="|".join(["0","1","2","3","4"]), 
-    depth="|".join(ds_depth)
+    depth="|".join(["1","2","3","4"]) # a lazy fix i fear
 
 
 
