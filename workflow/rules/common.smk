@@ -81,6 +81,8 @@ if scaff_cols[0] != 'id' or scaff_cols[1] != 'chrom':
 unique_scaff_groups = list(scaffold_groups.id.unique())
 unique_chromosomes = list(chromosomes.chrom.unique())  # don't need to unique it, but I do anyway
 
+ds_depth = config["downsample_bams"]["depths"]
+
 # deal with cases where the scaff groups are empty
 
 
@@ -196,6 +198,11 @@ def chromo_import_gdb_opts(wildcards):
 
 def scaff_group_import_gdb_opts(wildcards):
         return(" --batch-size 50 --reader-threads 2 --genomicsdb-shared-posixfs-optimizations --intervals results/bqsr-round-{bq}/gdb_intervals/{sg}.list --merge-contigs-into-num-partitions 1  --genomicsdb-workspace-path ".format(bq = wildcards.bqsr_round, sg = wildcards.scaff_group))
+
+
+def scaff_group_import_gdb_ds_opts(wildcards):
+        return(" --batch-size 50 --reader-threads 2 --genomicsdb-shared-posixfs-optimizations --intervals results/bqsr-round-{bq}/downsample-{cov}X/gdb_intervals/{sg}.list --merge-contigs-into-num-partitions 1  --genomicsdb-workspace-path ".format(bq = wildcards.bqsr_round, cov = wildcards.ds_depth, sg = wildcards.scaff_group))
+
 
 
 ## Here we get the -L option(s) for a chromosome or a scaff_group
