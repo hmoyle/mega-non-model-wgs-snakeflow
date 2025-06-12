@@ -36,7 +36,12 @@ mafs = list(
             )
         )
 
-
+ds_depths = list(
+        dict.fromkeys(
+            [str(x) for x in config["downsample_bams"]["depths"]] + 
+            [str(config["bqsr_maf"])]
+            )
+        )
 
 # deal with a path prefix for all the fastqs, if it exists
 data_prefix = ""
@@ -81,7 +86,6 @@ if scaff_cols[0] != 'id' or scaff_cols[1] != 'chrom':
 unique_scaff_groups = list(scaffold_groups.id.unique())
 unique_chromosomes = list(chromosomes.chrom.unique())  # don't need to unique it, but I do anyway
 
-ds_depth = config["downsample_bams"]["depths"]
 
 # deal with cases where the scaff groups are empty
 
@@ -152,10 +156,10 @@ wildcard_constraints:
     sg_or_chrom="|".join(unique_scaff_groups + unique_chromosomes),
     filter_condition="ALL|PASS|FAIL",
     maf="|".join(mafs),
+    dep="|".join(ds_depths),
     scatter=scatter_wc_constraint,
     igrp="|".join(indel_grps_list),
-    bqsr_round="|".join(["0","1","2","3","4"]), 
-    depth="|".join(["1","2","3","4"]) # a lazy fix i fear
+    bqsr_round="|".join(["0","1","2","3","4"])
 
 
 
@@ -202,7 +206,7 @@ def scaff_group_import_gdb_opts(wildcards):
 
 
 def scaff_group_import_gdb_ds_opts(wildcards):
-        return(" --batch-size 50 --reader-threads 2 --genomicsdb-shared-posixfs-optimizations --intervals results/bqsr-round-{bq}/downsample-{cov}X/gdb_intervals/{sg}.list --merge-contigs-into-num-partitions 1  --genomicsdb-workspace-path ".format(bq = wildcards.bqsr_round, cov = wildcards.depth, sg = wildcards.scaff_group))
+        return(" --batch-size 50 --reader-threads 2 --genomicsdb-shared-posixfs-optimizations --intervals results/bqsr-round-{bq}/downsample-{cov}X/gdb_intervals/{sg}.list --merge-contigs-into-num-partitions 1  --genomicsdb-workspace-path ".format(bq = wildcards.bqsr_round, cov = wildcards.dep, sg = wildcards.scaff_group))
 
 
 
