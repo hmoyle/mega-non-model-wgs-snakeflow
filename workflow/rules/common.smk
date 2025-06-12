@@ -154,7 +154,8 @@ wildcard_constraints:
     maf="|".join(mafs),
     scatter=scatter_wc_constraint,
     igrp="|".join(indel_grps_list),
-    bqsr_round="|".join(["0","1","2","3","4"])
+    bqsr_round="|".join(["0","1","2","3","4"]), 
+    depth="|".join(ds_depth)
 
 
 
@@ -201,7 +202,7 @@ def scaff_group_import_gdb_opts(wildcards):
 
 
 def scaff_group_import_gdb_ds_opts(wildcards):
-        return(" --batch-size 50 --reader-threads 2 --genomicsdb-shared-posixfs-optimizations --intervals results/bqsr-round-{bq}/downsample-{{cov}}X/gdb_intervals/{sg}.list --merge-contigs-into-num-partitions 1  --genomicsdb-workspace-path ".format(bq = wildcards.bqsr_round, sg = wildcards.scaff_group))
+        return(" --batch-size 50 --reader-threads 2 --genomicsdb-shared-posixfs-optimizations --intervals results/bqsr-round-{bq}/downsample-{cov}X/gdb_intervals/{sg}.list --merge-contigs-into-num-partitions 1  --genomicsdb-workspace-path ".format(bq = wildcards.bqsr_round, cov = wildcards.depth, sg = wildcards.scaff_group))
 
 
 
