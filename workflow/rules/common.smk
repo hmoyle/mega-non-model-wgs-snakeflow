@@ -201,7 +201,7 @@ def scaff_group_import_gdb_opts(wildcards):
 
 
 def scaff_group_import_gdb_ds_opts(wildcards):
-        return(" --batch-size 50 --reader-threads 2 --genomicsdb-shared-posixfs-optimizations --intervals results/bqsr-round-{bq}/downsample-{cov}X/gdb_intervals/{sg}.list --merge-contigs-into-num-partitions 1  --genomicsdb-workspace-path ".format(bq = wildcards.bqsr_round, cov = wildcards.ds_depth, sg = wildcards.scaff_group))
+        return(" --batch-size 50 --reader-threads 2 --genomicsdb-shared-posixfs-optimizations --intervals results/bqsr-round-{bq}/downsample-{{cov}}X/gdb_intervals/{sg}.list --merge-contigs-into-num-partitions 1  --genomicsdb-workspace-path ".format(bq = wildcards.bqsr_round, cov = wildcards.ds_depth, sg = wildcards.scaff_group))
 
 
 
